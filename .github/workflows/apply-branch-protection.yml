@@ -6,7 +6,7 @@ on:
       branch:
         description: 'Branch to protect'
         required: true
-        default: 'main'  # Default branch if none provided
+        default: 'main' # Default branch if none provided
 
 permissions:
   contents: read
@@ -16,10 +16,13 @@ jobs:
   set-branch-protection:
     runs-on: ubuntu-latest
     steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Get List of Repositories
         id: repos
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ORG_PAT_TOKEN }}  # Use your PAT here
         run: |
           repos=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
               -H "Accept: application/vnd.github.v3+json" \
@@ -29,7 +32,7 @@ jobs:
 
       - name: Apply Branch Protection to Each Repo
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ORG_PAT_TOKEN }}  # Use your PAT here
         run: |
           branch="${{ github.event.inputs.branch }}"
           for repo in ${{ steps.repos.outputs.repos }}; do
