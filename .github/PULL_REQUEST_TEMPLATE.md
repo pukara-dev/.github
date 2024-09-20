@@ -26,7 +26,7 @@ Fixes #(issue number)
 - [ ] Any dependent changes have been merged and published in downstream modules
 - [ ] Sensitive information (e.g., tokens, passwords) is not included.
 
-## Screenshots (if applicable)
+## Screenshots (if applicablee)
 
 Insert screenshots here to demonstrate changes, if necessary.
 
