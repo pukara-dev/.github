@@ -22,22 +22,23 @@ jobs:
       - name: Get List of Repositories
         id: repos
         env:
-          GITHUB_TOKEN: ${{ secrets.ORG_PAT_TOKEN }}  # Use your PAT here
+          GITHUB_TOKEN: ${{ secrets.ORG_PAT_TOKEN }}
         run: |
           repos=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
               -H "Accept: application/vnd.github.v3+json" \
               https://api.github.com/orgs/${{ github.repository_owner }}/repos?per_page=100 \
               | jq -r '.[].name')
+          echo "Found repositories: $repos"
           echo "::set-output name=repos::$repos"
 
       - name: Apply Branch Protection to Each Repo
         env:
-          GITHUB_TOKEN: ${{ secrets.ORG_PAT_TOKEN }}  # Use your PAT here
+          GITHUB_TOKEN: ${{ secrets.ORG_PAT_TOKEN }}
         run: |
           branch="${{ github.event.inputs.branch }}"
           for repo in ${{ steps.repos.outputs.repos }}; do
-            echo "Applying branch protection to repository: $repo on branch: $branch"
-            curl -X PUT \
+            echo "Processing repository: $repo"
+            response=$(curl -s -o response.txt -w "%{http_code}" -X PUT \
               -H "Authorization: token $GITHUB_TOKEN" \
               -H "Accept: application/vnd.github.luke-cage-preview+json" \
               https://api.github.com/repos/${{ github.repository_owner }}/$repo/branches/$branch/protection \
@@ -50,8 +51,18 @@ jobs:
                   "required_pull_request_reviews": {
                     "dismiss_stale_reviews": true,
                     "require_code_owner_reviews": true,
-                    "required_approving_review_count": 2
+                    "required_approving_review_count": 1
                   },
                   "restrictions": null
-              }'
+              }')
+
+            if [ "$response" -eq 200 ]; then
+              echo "Successfully applied branch protection to repository: $repo on branch: $branch"
+            else
+              echo "Failed to apply branch protection to repository: $repo on branch: $branch"
+              echo "HTTP Response Code: $response"
+              echo "Error details:"
+              cat response.txt
+              echo "-----------------------------------"
+            fi
           done
