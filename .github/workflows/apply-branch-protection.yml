@@ -6,7 +6,7 @@ on:
       branch:
         description: 'Branch to protect'
         required: true
-        default: 'main' # Default branch if none provided
+        default: 'main'
 
 permissions:
   contents: read
@@ -28,16 +28,24 @@ jobs:
               -H "Accept: application/vnd.github.v3+json" \
               https://api.github.com/orgs/${{ github.repository_owner }}/repos?per_page=100 \
               | jq -r '.[].name')
-          echo "Found repositories: $repos"
           echo "::set-output name=repos::$repos"
+          echo "Repositories: $repos"
 
       - name: Apply Branch Protection to Each Repo
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_PAT_TOKEN }}
         run: |
           branch="${{ github.event.inputs.branch }}"
-          for repo in ${{ steps.repos.outputs.repos }}; do
+          repos="${{ steps.repos.outputs.repos }}"
+
+          # Split repos string into array
+          IFS=' ' read -r -a repo_array <<< "$repos"
+
+          # Iterate through each repository
+          for repo in "${repo_array[@]}"; do
             echo "Processing repository: $repo"
+            
+            # Make the API request to set branch protection
             response=$(curl -s -o response.txt -w "%{http_code}" -X PUT \
               -H "Authorization: token $GITHUB_TOKEN" \
               -H "Accept: application/vnd.github.luke-cage-preview+json" \
@@ -56,6 +64,7 @@ jobs:
                   "restrictions": null
               }')
 
+            # Check if the request was successful
             if [ "$response" -eq 200 ]; then
               echo "Successfully applied branch protection to repository: $repo on branch: $branch"
             else
@@ -64,5 +73,18 @@ jobs:
               echo "Error details:"
               cat response.txt
               echo "-----------------------------------"
+              
+              # Check for specific errors (404, 403, etc.) and log appropriate messages
+              if [ "$response" -eq 404 ]; then
+                echo "Error 404: Repository $repo or branch $branch not found."
+              elif [ "$response" -eq 403 ]; then
+                echo "Error 403: Forbidden. Check your token permissions for repository $repo."
+              else
+                echo "An unexpected error occurred while processing repository $repo."
+              fi
             fi
+            
+            # Allow the script to continue even if there's an error
+            echo "Continuing to next repository..."
+            echo "-----------------------------------"
           done
