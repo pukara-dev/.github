@@ -28,15 +28,16 @@ jobs:
               -H "Accept: application/vnd.github.v3+json" \
               https://api.github.com/orgs/${{ github.repository_owner }}/repos?per_page=100 \
               | jq -r '.[].name')
-          echo "::set-output name=repos::$repos"
+          echo "repos=$repos" >> $GITHUB_ENV
           echo "Repositories: $repos"
 
       - name: Apply Branch Protection to Each Repo
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_PAT_TOKEN }}
+          repos: ${{ env.repos }}
         run: |
           branch="${{ github.event.inputs.branch }}"
-          repos="${{ steps.repos.outputs.repos }}"
+          repos="${{ env.repos }}"
 
           # Split repos string into array
           IFS=' ' read -r -a repo_array <<< "$repos"
