@@ -43,11 +43,6 @@ jobs:
           IFS=' ' read -r -a repo_array <<< "$repos"
 
           for repo in "${repo_array[@]}"; do
-            # Skip the pukara.es repository
-            if [ "$repo" == "pukara.es" ]; then
-              echo "Skipping repository: $repo"
-              continue
-            fi
 
             echo "Processing repository: $repo"
 
