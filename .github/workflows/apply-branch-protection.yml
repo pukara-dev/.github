@@ -44,7 +44,27 @@ jobs:
           # Iterate through each repository
           for repo in "${repo_array[@]}"; do
             echo "Processing repository: $repo"
-            
+
+            # Check if the repository exists
+            repo_exists=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $GITHUB_TOKEN" \
+              https://api.github.com/repos/${{ github.repository_owner }}/$repo)
+
+            if [ "$repo_exists" -ne 200 ]; then
+              echo "Repository $repo not found. HTTP Status: $repo_exists"
+              echo "Skipping repository: $repo"
+              continue
+            fi
+
+            # Check if the branch exists in the repository
+            branch_exists=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $GITHUB_TOKEN" \
+              https://api.github.com/repos/${{ github.repository_owner }}/$repo/branches/$branch)
+
+            if [ "$branch_exists" -ne 200 ]; then
+              echo "Branch $branch not found in repository: $repo. HTTP Status: $branch_exists"
+              echo "Skipping repository: $repo"
+              continue
+            fi
+
             # Make the API request to set branch protection
             response=$(curl -s -o response.txt -w "%{http_code}" -X PUT \
               -H "Authorization: token $GITHUB_TOKEN" \
